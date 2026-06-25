@@ -207,6 +207,7 @@
 </div>
 
 <script>
+    // 关闭模态框
     function closeModal() {
         document.getElementById('welcomeModal').style.display = 'none';
         try { sessionStorage.setItem('iChingWelcomed', 'true'); } catch(e) {}
@@ -374,18 +375,27 @@
         t.textContent = msg; t.classList.add('show');
         clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1800);
     }
+
+    // 使用 Web Crypto API 生成真正随机数来模拟掷三枚铜钱
     function tossThreeCoins() {
-        const r = Math.random();
+        const rand = new Uint16Array(1);
+        window.crypto.getRandomValues(rand);
+        const val = rand[0]; // 0 到 65535 的随机整数
+        // 按照传统概率：老阳(6) 1/8, 少阴(8) 3/8, 少阳(7) 3/8, 老阴(9) 1/8
         let heads;
-        if (r < 0.125) heads = 3;
-        else if (r < 0.5) heads = 2;
-        else if (r < 0.875) heads = 1;
-        else heads = 0;
+        if (val < 8192) heads = 3;           // 约 1/8 概率 三个正面 -> 老阳(9)
+        else if (val < 32768) heads = 2;     // 约 3/8 概率 两正一反 -> 少阳(7)
+        else if (val < 57344) heads = 1;     // 约 3/8 概率 一正两反 -> 少阴(8)
+        else heads = 0;                      // 约 1/8 概率 三个反面 -> 老阴(6)
+
+        // 注意：这里为了与之前的逻辑保持一致，我们返回的 isYang 基于 heads >= 2
+        // 老阳(9) 和 少阳(7) 为阳；少阴(8) 和 老阴(6) 为阴
         const isYang = heads >= 2;
         const faces = [];
         for (let i = 0; i < 3; i++) faces.push(i < heads ? 'heads' : 'tails');
         return { isYang, faces };
     }
+
     function shakeCoins() {
         if (shakeCount >= 6) { showToast('Already cast six times. View result or start over.'); return; }
         const btn = document.getElementById('btnShake'); btn.disabled = true;
